@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Beep Timer — Offline Interval Timer</title>
+<meta name="author" content="Djordje Ungar">
+<meta name="description" content="A fully customizable workout timer webapp that lets you define exercise names, detailed descriptions, work durations, breaks, and audio beeps, while securely saving all your custom routines directly to local storage.">
+<link rel="canonical" href="https://github.com/ArtBIT/beep-timer">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Beep Timer — Offline Interval Timer">
+<meta property="og:description" content="A fully customizable workout timer webapp that lets you define exercise names, detailed descriptions, work durations, breaks, and audio beeps, while securely saving all your custom routines directly to local storage.">
+<meta property="og:url" content="https://github.com/ArtBIT/beep-timer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Beep Timer — Offline Interval Timer">
+<meta name="twitter:description" content="A fully customizable workout timer webapp that lets you define exercise names, detailed descriptions, work durations, breaks, and audio beeps, while securely saving all your custom routines directly to local storage.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='26' y='2' width='12' height='6' rx='2' fill='%232a2f38'/%3E%3Crect x='29' y='6' width='6' height='8' fill='%232a2f38'/%3E%3Cline x1='46' y1='10' x2='50' y2='14' stroke='%232a2f38' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='38' r='26' fill='%23ff5a3c'/%3E%3Ccircle cx='32' cy='38' r='20' fill='%2315181d'/%3E%3Cline x1='32' y1='38' x2='32' y2='23' stroke='%23eef1f5' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='32' y1='38' x2='42' y2='38' stroke='%23eef1f5' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='38' r='3' fill='%23ff5a3c'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#15181d;
+    --panel2:#1c2027;
+    --accent:#ff5a3c;
+    --accent2:#3ca7ff;
+    --text:#eef1f5;
+    --muted:#8a92a0;
+    --muted-light:#c7cdd6;
+    --good:#3ecf8e;
+    --border:#2a2f38;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow-x:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+    box-shadow:0 4px 16px rgba(0,0,0,.35);
+    position:relative;
+    z-index:2;
+  }
+  header h1{
+    font-size:16px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:.5px;
+    color:var(--muted);
+    flex:0 0 auto;
+  }
+  select#presetSelect{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    flex:1 1 160px;
+    min-width:140px;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  select#bgEffectSelect{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    flex:0 0 auto;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  select#bgPaletteSelect{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    flex:0 0 auto;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  .iconbtn{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:14px;
+    cursor:pointer;
+    white-space:nowrap;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  .iconbtn:hover{ border-color:var(--accent); }
+  .iconbtn.danger:hover{ border-color:#ff4d4d; color:#ff4d4d; }
+
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    text-align:center;
+    gap:14px;
+  }
+  #workoutImage{
+    width:120px;height:120px;
+    border-radius:16px;
+    object-fit:cover;
+    border:1px solid var(--border);
+    display:none;
+    background:var(--panel2);
+    box-shadow:0 6px 20px rgba(0,0,0,.45);
+  }
+  #timerName{
+    font-size:15px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:600;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  #sessionDesc{
+    font-size:13px;
+    color:var(--muted-light);
+    max-width:480px;
+    line-height:1.5;
+    display:none;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  #workoutDesc{
+    font-size:14px;
+    color:var(--text);
+    max-width:480px;
+    line-height:1.5;
+    display:none;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  #phaseLabel{
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    padding:4px 14px;
+    border-radius:20px;
+    background:var(--panel2);
+    color:var(--accent);
+    border:1px solid var(--border);
+    max-width:90vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  #phaseLabel.rest{ color:var(--accent2); }
+  #phaseLabel.done{ color:var(--good); }
+
+  #clock{
+    font-size:min(22vw,150px);
+    font-weight:800;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:2px;
+    text-shadow:0 6px 24px rgba(0,0,0,.5);
+  }
+  #roundInfo{
+    font-size:16px;
+    color:var(--muted-light);
+    font-weight:600;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  #roundInfo b{ color:var(--text); }
+
+  #meta{
+    display:flex;
+    gap:24px;
+    color:var(--muted-light);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.5px;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+  }
+  #meta span b{ color:var(--text); display:block; font-size:16px; }
+
+  #dots{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    max-width:600px;
+    justify-content:center;
+  }
+  .dot{
+    width:14px;height:14px;border-radius:50%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+  }
+  .dot.rest-dot{ width:8px;height:8px; margin:3px 0; opacity:.6;}
+  .dot.active{ background:var(--accent); border-color:var(--accent); }
+  .dot.active.rest-dot{ background:var(--accent2); border-color:var(--accent2); }
+  .dot.complete{ background:var(--good); border-color:var(--good); opacity:.5; }
+
+  #controls{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    padding:18px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .ctrlbtn{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:50%;
+    width:64px;height:64px;
+    font-size:22px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  .ctrlbtn svg{
+    width:26px;
+    height:26px;
+    display:block;
+    fill:currentColor;
+  }
+  .ctrlbtn.play svg{
+    width:32px;
+    height:32px;
+  }
+  .ctrlbtn.small svg{
+    width:20px;
+    height:20px;
+  }
+  .ctrlbtn.play{
+    width:80px;height:80px;
+    background:var(--accent);
+    border-color:var(--accent);
+    font-size:28px;
+    box-shadow:0 6px 20px rgba(0,0,0,.45);
+  }
+  .ctrlbtn:hover{ filter:brightness(1.15); }
+  .ctrlbtn.small{
+    width:48px;height:48px;
+    font-size:16px;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    padding:10px;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+    position:relative;
+    z-index:2;
+    line-height:1.8;
+  }
+  footer a{ color:var(--muted-light); }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.65);
+    display:none;
+    align-items:flex-start;justify-content:center;
+    z-index:100;
+    padding:20px;
+    overflow-y:auto;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    width:100%;
+    max-width:520px;
+    padding:22px;
+    margin:20px 0 60px;
+  }
+  .modal h2{
+    margin:0 0 16px;
+    font-size:18px;
+  }
+  .field{
+    margin-bottom:16px;
+  }
+  .field label{
+    display:block;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin-bottom:6px;
+    font-weight:700;
+  }
+  .field input[type=text]{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:10px;
+    font-size:14px;
+  }
+  .field select{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:10px;
+    font-size:14px;
+  }
+  .field textarea{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:10px;
+    font-size:13px;
+    font-family:inherit;
+    resize:vertical;
+    min-height:44px;
+  }
+  .timeinput{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .timeinput input[type=number]{
+    width:70px;
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:10px;
+    font-size:16px;
+    text-align:center;
+  }
+  .timeinput span{ color:var(--muted); font-size:13px; }
+  .row2{ display:flex; gap:14px; }
+  .row2 .field{ flex:1; }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+  }
+  .btn{
+    flex:1;
+    padding:12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--panel2);
+    color:var(--text);
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+  }
+  .hint{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:20px;
+    line-height:1.6;
+  }
+  kbd{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:1px 6px;
+    font-size:11px;
+  }
+
+  hr.sep{
+    border:none;
+    border-top:1px solid var(--border);
+    margin:20px 0;
+  }
+
+  #workoutList{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .workoutRow{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+  }
+  .workoutRow .wrHead{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .workoutRow .wrHead input[type=text]{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:8px 10px;
+    font-size:14px;
+  }
+  .miniBtn{
+    background:var(--panel);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    width:32px;height:32px;
+    font-size:14px;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .miniBtn:hover{ border-color:var(--accent); }
+  .wrBody{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+  }
+  .wrField{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .wrField label{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .wrThumb{
+    width:44px;height:44px;
+    border-radius:8px;
+    object-fit:cover;
+    border:1px solid var(--border);
+    background:var(--panel);
+  }
+  #addWorkoutBtn{
+    width:100%;
+  }
+
+  :fullscreen #app{ justify-content:center; }
+  :fullscreen header, :fullscreen footer{ display:none; }
+  :fullscreen main{ flex:1; }
+
+  #bgCanvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    display:block;
+    background:var(--bg);
+  }
+  #app{
+    position:relative;
+    z-index:1;
+    background:transparent;
+  }
+  .iconbtn.active{ border-color:var(--accent2); color:var(--accent2); }
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div id="app">
+
+  <header>
+    <h1>BEEP TIMER</h1>
+    <select id="presetSelect"></select>
+    <button class="iconbtn" id="newBtn">+ New</button>
+    <button class="iconbtn" id="editBtn">Edit</button>
+    <button class="iconbtn danger" id="deleteBtn">Delete</button>
+    <button class="iconbtn" id="muteBtn">🔊</button>
+    <button class="iconbtn" id="speechBtn" title="Read workout instructions aloud">🗣️</button>
+    <select id="bgEffectSelect" title="Background screen saver">
+      <option value="off">BG: Off</option>
+      <option value="plasma">BG: Plasma</option>
+      <option value="waves">BG: Waves</option>
+      <option value="aurora">BG: Aurora</option>
+      <option value="orbs">BG: Orbs</option>
+      <option value="gradient">BG: Gradient</option>
+    </select>
+    <select id="bgPaletteSelect" title="Background color palette">
+      <option value="sunset">Sunset Pop</option>
+      <option value="candy">Cotton Candy</option>
+      <option value="ocean">Ocean Deep</option>
+      <option value="forest">Forest Moss</option>
+    </select>
+    <button class="iconbtn" id="fsBtn">⛶</button>
+  </header>
+
+  <main>
+    <div id="timerName">Beep Every Minute</div>
+    <div id="sessionDesc"></div>
+    <img id="workoutImage" alt="">
+    <div id="phaseLabel">WORK</div>
+    <div id="workoutDesc"></div>
+    <div id="clock">1:00</div>
+    <div id="roundInfo">ROUND <b id="roundNow">1</b> / <span id="roundTotal">10</span></div>
+    <div id="meta">
+      <span>ELAPSED<b id="elapsed">0:00</b></span>
+      <span>REMAINING<b id="remaining">10:00</b></span>
+    </div>
+    <div id="dots"></div>
+  </main>
+
+  <div id="controls">
+    <button class="ctrlbtn small" id="resetBtn" title="Reset (R)"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></button>
+    <button class="ctrlbtn play" id="playBtn" title="Play/Pause (Space)"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="ctrlbtn small" id="skipBtn" title="Skip round (L)"><svg viewBox="0 0 24 24"><path d="M6 6v12l8.5-6L6 6zm10 0v12h2V6h-2z"/></svg></button>
+  </div>
+
+  <footer><a href="https://github.com/ArtBIT/beep-timer" target="_blank" rel="noopener">GitHub</a></footer>
+</div>
+
+<!-- Editor modal -->
+<div class="overlay" id="editorOverlay">
+  <div class="modal">
+    <h2>Edit Session</h2>
+    <div class="field">
+      <label>Session Name</label>
+      <input type="text" id="fName" maxlength="60" placeholder="Beep Every Minute">
+    </div>
+    <div class="field">
+      <label>Session Description</label>
+      <textarea id="fDesc" maxlength="300" placeholder="What is this session for?"></textarea>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Repeat whole session</label>
+        <div class="timeinput">
+          <input type="number" id="fRounds" min="1" max="99" value="1"><span>rounds</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="sep">
+    <div class="field" style="margin-bottom:8px;">
+      <label>Workouts</label>
+    </div>
+    <div id="workoutList"></div>
+    <button class="btn" id="addWorkoutBtn">+ Add Workout</button>
+
+    <div class="modal-actions">
+      <button class="btn" id="cancelEdit">Cancel</button>
+      <button class="btn primary" id="saveEdit">Save</button>
+    </div>
+    <div class="hint">
+      Sub-beep plays a quieter tone partway through a workout to mark progress (e.g. halfway, or every quarter).<br>
+      🗣️ reads each workout's name and description aloud when it starts, using your browser's built-in voice (no internet needed).<br>
+      Shortcuts: <kbd>Space</kbd> play/pause &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>L</kbd> skip &nbsp; <kbd>M</kbd> mute &nbsp; <kbd>V</kbd> voice &nbsp; <kbd>B</kbd> cycle background &nbsp; <kbd>F</kbd> fullscreen &nbsp; <kbd>E</kbd> edit
+    </div>
+  </div>
+</div>
+
+<!-- Hidden template for a workout row -->
+<template id="workoutRowTpl">
+  <div class="workoutRow">
+    <div class="wrHead">
+      <img class="wrThumb" alt="">
+      <input type="text" class="wrName" maxlength="40" placeholder="Workout name">
+      <button class="miniBtn wrUp" title="Move up">↑</button>
+      <button class="miniBtn wrDown" title="Move down">↓</button>
+      <button class="miniBtn wrDel" title="Remove">✕</button>
+    </div>
+    <div class="field">
+      <textarea class="wrDesc" maxlength="200" placeholder="Instructions or notes for this workout"></textarea>
+    </div>
+    <div class="wrBody">
+      <div class="wrField">
+        <label>Duration</label>
+        <div class="timeinput">
+          <input type="number" class="wrMin" min="0" max="180" value="1" style="width:56px;"><span>m</span>
+          <input type="number" class="wrSec" min="0" max="59" value="0" style="width:56px;"><span>s</span>
+        </div>
+      </div>
+      <div class="wrField">
+        <label>Rest after</label>
+        <div class="timeinput">
+          <input type="number" class="wrRestMin" min="0" max="60" value="0" style="width:56px;"><span>m</span>
+          <input type="number" class="wrRestSec" min="0" max="59" value="0" style="width:56px;"><span>s</span>
+        </div>
+      </div>
+      <div class="wrField">
+        <label>Sub-beep</label>
+        <select class="wrSubBeep">
+          <option value="none">None</option>
+          <option value="half">At half</option>
+          <option value="quarter">Every quarter</option>
+        </select>
+      </div>
+      <div class="wrField">
+        <label>Image</label>
+        <div class="timeinput">
+          <input type="file" class="wrImage" accept="image/*">
+          <button type="button" class="miniBtn wrImageClear" title="Remove image">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_SESSIONS = "beepTimer.sessions.v2";
+  var STORAGE_PRESETS_V1 = "beepTimer.presets.v1";
+  var STORAGE_SETTINGS = "beepTimer.settings.v1";
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function defaultWorkout(name){
+    return { id: uid(), name: name || "Work", description: "", durationSec: 60, restSec: 0, subBeep: "none", image: null };
+  }
+  function defaultSession(){
+    return {
+      id: "mtlahfjl3bn7d",
+      name: "Lymphatic Pump",
+      description: "This is my lymphatic pump session, the goal is to start the flow of the lymphatic system.",
+      rounds: 1,
+      workouts: [
+        {"id":"mtlap5aq5jg9h","name":"Small jumps, arms relaxed","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aq1ee6f","name":"Semi-squat to arms raise","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aq69zt8","name":"Left arm forward, right arm back, swap","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aqx26hn","name":"Arms apart, rotate torso","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aq9t84c","name":"Rotate chest, arms bent at elbows","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aqpm9gg","name":"Rotate shoulders, arms relaxed","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aqiiy66","name":"Squats, ironman stance","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aqzt8bb","name":"Raise knees, clap below knees","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aq0zu2c","name":"Arms apart, rotate at shoulders","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null},
+        {"id":"mtlap5aq3abpa","name":"Golf Swings","description":"","durationSec":60,"restSec":0,"subBeep":"none","image":null}
+      ]
+    };
+  }
+
+  function w(id, name, durationSec, restSec){
+    return { id: id, name: name, description: "", durationSec: durationSec, restSec: restSec || 0, subBeep: "none", image: null };
+  }
+
+  function calisthenicsWorkouts(prefix){
+    return [
+      w(prefix+"1", "Push-Ups", 45, 15),
+      w(prefix+"2", "Sit-Ups", 45, 15),
+      w(prefix+"3", "Chair Triceps Dips", 45, 15),
+      w(prefix+"4", "Bodyweight Squats", 45, 15),
+      w(prefix+"5", "Walking Lunges", 45, 15),
+      w(prefix+"6", "Mountain Climbers", 45, 15),
+      w(prefix+"7", "Plank Hold", 45, 15),
+      w(prefix+"8", "Glute Bridges", 45, 15),
+      w(prefix+"9", "Burpees", 45, 15),
+      w(prefix+"10", "Superman Hold", 45, 15)
+    ];
+  }
+
+  function homeCalisthenicsSession(){
+    return {
+      id: "mtlahc20min",
+      name: "Home Calisthenics (20 min)",
+      description: "No-weights bodyweight circuit — push-ups, sit-ups, chair triceps dips, squats and more. Two rounds through the full circuit.",
+      rounds: 2,
+      workouts: calisthenicsWorkouts("mtlahc20-")
+    };
+  }
+  function quickCalisthenicsSession(){
+    return {
+      id: "mtlahc10min",
+      name: "Quick Calisthenics (10 min)",
+      description: "Shorter no-weights bodyweight circuit for a quick full-body burn. Push-ups, sit-ups, chair triceps dips, squats and more.",
+      rounds: 1,
+      workouts: calisthenicsWorkouts("mtlahc10-")
+    };
+  }
+  function plankLadderSession(){
+    return {
+      id: "mtlaplank5min",
+      name: "Plank Ladder (5 min)",
+      description: "A plank endurance ladder — hold each position and switch straight into the next, no rest between transitions.",
+      rounds: 1,
+      workouts: [
+        w("mtlapl-1", "Regular Plank", 60, 0),
+        w("mtlapl-2", "Elbow Plank", 60, 0),
+        w("mtlapl-3", "Left Side Plank", 30, 0),
+        w("mtlapl-4", "Right Side Plank", 30, 0),
+        w("mtlapl-5", "Elbow Plank", 60, 0),
+        w("mtlapl-6", "Regular Plank", 60, 0)
+      ]
+    };
+  }
+
+  // fills in fields missing from sessions/workouts saved before a schema addition
+  function normalizeSession(s){
+    s.description = s.description || "";
+    s.workouts.forEach(function(w){ w.description = w.description || ""; });
+    return s;
+  }
+
+  // ---------- Storage ----------
+  function loadSessions(){
+    try{
+      var raw = localStorage.getItem(STORAGE_SESSIONS);
+      if(raw){
+        var arr = JSON.parse(raw);
+        if(Array.isArray(arr) && arr.length) return arr;
+      }
+      // migrate from old v1 uniform-interval presets, if present
+      var oldRaw = localStorage.getItem(STORAGE_PRESETS_V1);
+      if(oldRaw){
+        var oldArr = JSON.parse(oldRaw);
+        if(Array.isArray(oldArr) && oldArr.length){
+          return oldArr.map(function(p){
+            return {
+              id: p.id || uid(),
+              name: p.name || "Timer",
+              description: "",
+              rounds: p.rounds || 1,
+              workouts: [{
+                id: uid(),
+                name: "Work",
+                description: "",
+                durationSec: p.intervalSec || 60,
+                restSec: p.restSec || 0,
+                subBeep: "none",
+                image: null
+              }]
+            };
+          });
+        }
+      }
+      return null;
+    }catch(e){ return null; }
+  }
+  function saveSessions(arr){
+    localStorage.setItem(STORAGE_SESSIONS, JSON.stringify(arr));
+  }
+  function loadSettings(){
+    try{
+      var raw = localStorage.getItem(STORAGE_SETTINGS);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+  function saveSettings(s){
+    localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(s));
+  }
+
+  var sessions = loadSessions();
+  if(!sessions){
+    sessions = [defaultSession(), homeCalisthenicsSession(), quickCalisthenicsSession(), plankLadderSession()];
+  }
+  sessions = sessions.map(normalizeSession);
+  saveSessions(sessions);
+  var settings = loadSettings();
+  var currentId = settings.currentId && sessions.some(function(s){return s.id===settings.currentId;})
+    ? settings.currentId : sessions[0].id;
+  var muted = !!settings.muted;
+
+  function getSession(id){
+    for(var i=0;i<sessions.length;i++) if(sessions[i].id===id) return sessions[i];
+    return sessions[0];
+  }
+
+  // ---------- DOM ----------
+  var presetSelect = document.getElementById("presetSelect");
+  var newBtn = document.getElementById("newBtn");
+  var editBtn = document.getElementById("editBtn");
+  var deleteBtn = document.getElementById("deleteBtn");
+  var muteBtn = document.getElementById("muteBtn");
+  var speechBtn = document.getElementById("speechBtn");
+  var bgEffectSelect = document.getElementById("bgEffectSelect");
+  var bgPaletteSelect = document.getElementById("bgPaletteSelect");
+  var fsBtn = document.getElementById("fsBtn");
+
+  var timerNameEl = document.getElementById("timerName");
+  var sessionDescEl = document.getElementById("sessionDesc");
+  var workoutImageEl = document.getElementById("workoutImage");
+  var phaseLabelEl = document.getElementById("phaseLabel");
+  var workoutDescEl = document.getElementById("workoutDesc");
+  var clockEl = document.getElementById("clock");
+  var roundNowEl = document.getElementById("roundNow");
+  var roundTotalEl = document.getElementById("roundTotal");
+  var elapsedEl = document.getElementById("elapsed");
+  var remainingEl = document.getElementById("remaining");
+  var dotsEl = document.getElementById("dots");
+
+  var playBtn = document.getElementById("playBtn");
+  var resetBtn = document.getElementById("resetBtn");
+  var skipBtn = document.getElementById("skipBtn");
+
+  var overlay = document.getElementById("editorOverlay");
+  var fName = document.getElementById("fName");
+  var fDesc = document.getElementById("fDesc");
+  var fRounds = document.getElementById("fRounds");
+  var workoutListEl = document.getElementById("workoutList");
+  var addWorkoutBtn = document.getElementById("addWorkoutBtn");
+  var workoutRowTpl = document.getElementById("workoutRowTpl");
+  var cancelEdit = document.getElementById("cancelEdit");
+  var saveEdit = document.getElementById("saveEdit");
+
+  // ---------- Preset select population ----------
+  function refreshPresetSelect(){
+    presetSelect.innerHTML = "";
+    sessions.forEach(function(s){
+      var opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.name;
+      if(s.id===currentId) opt.selected = true;
+      presetSelect.appendChild(opt);
+    });
+  }
+  refreshPresetSelect();
+
+  // ---------- Timer engine ----------
+  // schedule: [{type:'work'|'rest', dur:seconds, round:n, name, image, subBeep}]
+  var schedule = [];
+  var totalSeconds = 0;
+  var phaseIndex = 0;
+  var phaseElapsed = 0;
+  var running = false;
+  var rafId = null;
+  var lastTick = null;
+  var finished = false;
+  var firedSubBeeps = null; // set of fractions already fired in current phase
+
+  function buildSchedule(s){
+    schedule = [];
+    for(var r=1; r<=s.rounds; r++){
+      s.workouts.forEach(function(w){
+        schedule.push({type:"work", dur:w.durationSec, round:r, name:w.name, description:w.description, image:w.image, subBeep:w.subBeep});
+        if(w.restSec > 0){
+          schedule.push({type:"rest", dur:w.restSec, round:r, name:"Rest", description:"", image:null, subBeep:"none"});
+        }
+      });
+    }
+    totalSeconds = schedule.reduce(function(s2,ph){return s2+ph.dur;}, 0);
+  }
+
+  function fmt(sec){
+    sec = Math.max(0, Math.ceil(sec));
+    var m = Math.floor(sec/60);
+    var s = sec%60;
+    return m + ":" + (s<10 ? "0"+s : s);
+  }
+
+  function elapsedTotal(){
+    var e = 0;
+    for(var i=0;i<phaseIndex;i++) e += schedule[i].dur;
+    e += Math.min(phaseElapsed, schedule[phaseIndex] ? schedule[phaseIndex].dur : 0);
+    return e;
+  }
+
+  function buildDots(){
+    dotsEl.innerHTML = "";
+    schedule.forEach(function(ph){
+      var d = document.createElement("div");
+      d.className = "dot" + (ph.type==="rest" ? " rest-dot" : "");
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function renderDots(){
+    var kids = dotsEl.children;
+    for(var i=0;i<kids.length;i++){
+      kids[i].classList.remove("active","complete");
+      if(i < phaseIndex) kids[i].classList.add("complete");
+      else if(i === phaseIndex) kids[i].classList.add("active");
+    }
+  }
+
+  function render(){
+    var s = getSession(currentId);
+    var ph = schedule[phaseIndex];
+    if(finished){
+      phaseLabelEl.textContent = "DONE";
+      phaseLabelEl.className = "done";
+      clockEl.textContent = "0:00";
+      roundNowEl.textContent = s.rounds;
+      remainingEl.textContent = "0:00";
+      workoutImageEl.style.display = "none";
+      workoutDescEl.style.display = "none";
+    } else {
+      phaseLabelEl.textContent = ph.type === "rest" ? "REST" : ph.name;
+      phaseLabelEl.className = ph.type === "rest" ? "rest" : "";
+      var remainInPhase = ph.dur - phaseElapsed;
+      clockEl.textContent = fmt(remainInPhase);
+      roundNowEl.textContent = ph.round;
+      remainingEl.textContent = fmt(totalSeconds - elapsedTotal());
+      if(ph.image){
+        workoutImageEl.src = ph.image;
+        workoutImageEl.style.display = "block";
+      } else {
+        workoutImageEl.style.display = "none";
+      }
+      if(ph.description){
+        workoutDescEl.textContent = ph.description;
+        workoutDescEl.style.display = "block";
+      } else {
+        workoutDescEl.style.display = "none";
+      }
+    }
+    roundTotalEl.textContent = s.rounds;
+    elapsedEl.textContent = fmt(elapsedTotal());
+    timerNameEl.textContent = s.name;
+    if(s.description){
+      sessionDescEl.textContent = s.description;
+      sessionDescEl.style.display = "block";
+    } else {
+      sessionDescEl.style.display = "none";
+    }
+    renderDots();
+    playBtn.innerHTML = running
+      ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
+      : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  }
+
+  function loadCurrentSession(){
+    var s = getSession(currentId);
+    buildSchedule(s);
+    buildDots();
+    phaseIndex = 0;
+    phaseElapsed = 0;
+    finished = false;
+    running = false;
+    firedSubBeeps = {};
+    render();
+  }
+
+  // ---------- Audio (WebAudio, no external files -> fully offline) ----------
+  var audioCtx = null;
+  function ctx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function beep(freq, dur, vol){
+    if(muted) return;
+    try{
+      var ac = ctx();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      var now = ac.currentTime;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.01);
+      gain.gain.linearRampToValueAtTime(0, now + dur);
+      osc.start(now);
+      osc.stop(now + dur + 0.02);
+    }catch(e){}
+  }
+  function beepWork(){ beep(880, 0.18, 0.3); }
+  function beepRest(){ beep(600, 0.15, 0.25); }
+  function beepSub(){ beep(1046, 0.09, 0.18); }
+  function beepDone(){
+    beep(1046, 0.16, 0.3);
+    setTimeout(function(){ beep(1318, 0.28, 0.3); }, 180);
+  }
+
+  // ---------- Voice announcements (Web Speech API, on-device, works offline) ----------
+  var speechSupported = "speechSynthesis" in window;
+  var speechEnabled = speechSupported && !!settings.speechEnabled;
+  function speak(text){
+    if(!speechEnabled || !text) return;
+    try{
+      window.speechSynthesis.cancel();
+      var utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1;
+      window.speechSynthesis.speak(utter);
+    }catch(e){}
+  }
+  function announcePhase(ph){
+    if(!ph) return;
+    if(ph.type === "rest"){ speak("Rest"); return; }
+    speak(ph.name + (ph.description ? ". " + ph.description : ""));
+  }
+
+  // sub-beep fires at these fractions of *remaining* time for a phase
+  function subBeepFractions(mode){
+    if(mode === "half") return [0.5];
+    if(mode === "quarter") return [0.75, 0.5, 0.25];
+    return [];
+  }
+
+  function checkSubBeeps(ph){
+    if(!ph || ph.type !== "work" || ph.subBeep === "none") return;
+    var fracs = subBeepFractions(ph.subBeep);
+    var remainFrac = (ph.dur - phaseElapsed) / ph.dur;
+    fracs.forEach(function(f){
+      if(!firedSubBeeps[f] && remainFrac <= f){
+        firedSubBeeps[f] = true;
+        beepSub();
+      }
+    });
+  }
+
+  // ---------- Tick loop ----------
+  function tick(ts){
+    if(!running) return;
+    if(lastTick === null) lastTick = ts;
+    var dt = (ts - lastTick) / 1000;
+    lastTick = ts;
+
+    phaseElapsed += dt;
+    var ph = schedule[phaseIndex];
+    checkSubBeeps(ph);
+    if(ph && phaseElapsed >= ph.dur){
+      phaseElapsed = 0;
+      phaseIndex++;
+      firedSubBeeps = {};
+      if(phaseIndex >= schedule.length){
+        finished = true;
+        running = false;
+        beepDone();
+        render();
+        return;
+      } else {
+        var nextPh = schedule[phaseIndex];
+        if(nextPh.type === "rest") beepRest(); else beepWork();
+        announcePhase(nextPh);
+      }
+    }
+    render();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function play(){
+    if(finished || running) return;
+    running = true;
+    lastTick = null;
+    ctx(); // unlock audio on user gesture
+    if(phaseIndex === 0 && phaseElapsed === 0) announcePhase(schedule[phaseIndex]);
+    rafId = requestAnimationFrame(tick);
+    render();
+  }
+  function pause(){
+    running = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    if(speechSupported) window.speechSynthesis.cancel();
+    render();
+  }
+  function togglePlay(){ running ? pause() : play(); }
+  function reset(){
+    pause();
+    loadCurrentSession();
+  }
+  function skip(){
+    if(finished) return;
+    phaseElapsed = 0;
+    phaseIndex++;
+    firedSubBeeps = {};
+    if(phaseIndex >= schedule.length){
+      finished = true;
+      pause();
+      beepDone();
+    } else {
+      var nextPh = schedule[phaseIndex];
+      if(running){ if(nextPh.type === "rest") beepRest(); else beepWork(); announcePhase(nextPh); }
+    }
+    render();
+  }
+
+  // ---------- Mute ----------
+  function refreshMuteBtn(){
+    muteBtn.textContent = muted ? "🔇" : "🔊";
+  }
+  function toggleMute(){
+    muted = !muted;
+    settings.muted = muted;
+    saveSettings(settings);
+    refreshMuteBtn();
+  }
+  refreshMuteBtn();
+
+  // ---------- Voice toggle ----------
+  function refreshSpeechBtn(){
+    speechBtn.classList.toggle("active", speechEnabled);
+  }
+  function toggleSpeech(){
+    if(!speechSupported) return;
+    speechEnabled = !speechEnabled;
+    settings.speechEnabled = speechEnabled;
+    saveSettings(settings);
+    if(!speechEnabled) window.speechSynthesis.cancel();
+    refreshSpeechBtn();
+  }
+  if(!speechSupported) speechBtn.style.display = "none";
+  refreshSpeechBtn();
+
+  // ---------- Fullscreen ----------
+  function toggleFullscreen(){
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen && document.exitFullscreen();
+    }
+  }
+
+  // ---------- Animated background screen savers (WebGL, fully offline) ----------
+  // palettes curated from coolors.co-style trending combinations, converted to 0-1 RGB
+  var BG_PALETTES = {
+    sunset:  { label: "Sunset Pop",  a: [0.976, 0.255, 0.267], b: [0.973, 0.588, 0.118], c: [0.976, 0.780, 0.310], bright: 0.6 },
+    candy:   { label: "Cotton Candy", a: [1.000, 0.678, 0.678], b: [0.608, 0.965, 1.000], c: [0.741, 0.698, 1.000], bright: 0.65 },
+    ocean:   { label: "Ocean Deep",  a: [0.008, 0.243, 0.541], b: [0.000, 0.588, 0.780], c: [0.565, 0.878, 0.937], bright: 0.85 },
+    forest:  { label: "Forest Moss", a: [0.204, 0.306, 0.255], b: [0.345, 0.506, 0.341], c: [0.855, 0.843, 0.804], bright: 0.9 }
+  };
+
+  var BgFX = (function(){
+    var canvas = document.getElementById("bgCanvas");
+    var gl = null;
+    var programs = {};
+    var activeName = null;
+    var rafBg = null;
+    var startTime = 0;
+    var palette = BG_PALETTES.sunset;
+
+    var VERT_SRC =
+      "attribute vec2 aPos;" +
+      "void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }";
+
+    // colors come in as uniforms so switching palette never needs a shader recompile
+    var HEADER =
+      "precision mediump float;" +
+      "uniform float uTime;" +
+      "uniform vec2 uRes;" +
+      "uniform vec3 uColA;" +
+      "uniform vec3 uColB;" +
+      "uniform vec3 uColC;" +
+      "uniform float uBright;" +
+      "void main(){" +
+      "  vec2 uv = (gl_FragCoord.xy / uRes) * 2.0 - 1.0;" +
+      "  uv.x *= uRes.x / uRes.y;" +
+      "  vec3 colA = uColA;" +
+      "  vec3 colB = uColB;" +
+      "  vec3 colC = uColC;";
+
+    var FOOTER =
+      "  gl_FragColor = vec4(col * uBright, 1.0);" +
+      "}";
+
+    var SHADERS = {
+      plasma: HEADER +
+        "  float t = uTime * 0.55;" +
+        "  vec2 p = uv * 3.2;" +
+        "  float v = sin(p.x + t) + sin(p.y + t * 1.3) +" +
+        "            sin((p.x + p.y + t) * 0.8) +" +
+        "            sin(sqrt(p.x*p.x + p.y*p.y) * 2.0 - t * 1.7);" +
+        "  v *= 0.25;" +
+        "  vec3 col = mix(colA, colB, 0.5 + 0.5*sin(v*3.14159));" +
+        "  col = mix(col, colC, 0.5 + 0.5*cos(v*3.14159 + 1.5));" +
+        FOOTER,
+
+      waves: HEADER +
+        "  float t = uTime * 0.5;" +
+        "  float y = uv.y * 3.0;" +
+        "  float v = sin(y + sin(uv.x*2.0+t)*1.5 + t) +" +
+        "            sin(y*1.7 - t*1.3 + uv.x*3.0);" +
+        "  v *= 0.25;" +
+        "  vec3 col = mix(colA, colB, 0.5 + 0.5*sin(v*3.14159 + uv.x));" +
+        "  col = mix(col, colC, 0.5 + 0.5*sin(v*2.0 - t));" +
+        FOOTER,
+
+      aurora: HEADER +
+        "  float t = uTime * 0.4;" +
+        "  float bands = sin(uv.x*4.0 + sin(uv.y*2.0+t)*1.2 + t) * 0.5 + 0.5;" +
+        "  float fall = smoothstep(-1.1, 0.3, uv.y) * (1.0 - smoothstep(-0.1, 1.1, uv.y));" +
+        "  vec3 col = mix(colA, colB, bands);" +
+        "  col = mix(col, colC, 0.5 + 0.5*sin(uv.x*1.5 - t*1.4));" +
+        "  col *= 0.5 + 0.5*fall;" +
+        FOOTER,
+
+      orbs: HEADER +
+        "  float t = uTime * 0.7;" +
+        "  vec2 c1 = vec2(sin(t*0.7)*0.6, cos(t*0.5)*0.5);" +
+        "  vec2 c2 = vec2(cos(t*0.9)*0.5, sin(t*0.6)*0.6);" +
+        "  vec2 c3 = vec2(sin(t*0.4+2.0)*0.7, cos(t*0.8+1.0)*0.4);" +
+        "  vec2 c4 = vec2(cos(t*0.6+1.5)*0.65, sin(t*0.35+0.5)*0.55);" +
+        "  vec2 c5 = vec2(sin(t*0.5+3.0)*0.55, cos(t*0.7+2.0)*0.65);" +
+        "  vec2 c6 = vec2(cos(t*0.8+0.8)*0.6, sin(t*0.45+1.8)*0.5);" +
+        "  float field = 0.18/length(uv-c1) + 0.18/length(uv-c2) + 0.18/length(uv-c3) +" +
+        "                0.18/length(uv-c4) + 0.18/length(uv-c5) + 0.18/length(uv-c6);" +
+        "  float v = smoothstep(0.8, 3.0, field);" +
+        "  vec3 col = mix(colA, colB, v);" +
+        "  col = mix(col, colC, smoothstep(2.0, 4.5, field));" +
+        FOOTER,
+
+      gradient: HEADER +
+        "  float t = uTime * 0.18;" +
+        "  vec3 col = mix(colA, colB, 0.5 + 0.5*sin(uv.x*0.8 + uv.y*0.8 + t));" +
+        "  col = mix(col, colC, 0.5 + 0.5*cos(t*0.3));" +
+        FOOTER
+    };
+
+    function compileShader(type, src){
+      var sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)){
+        gl.deleteShader(sh);
+        return null;
+      }
+      return sh;
+    }
+
+    function buildProgram(fragSrc){
+      var vs = compileShader(gl.VERTEX_SHADER, VERT_SRC);
+      var fs = compileShader(gl.FRAGMENT_SHADER, fragSrc);
+      if(!vs || !fs) return null;
+      var program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if(!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+      var aPos = gl.getAttribLocation(program, "aPos");
+      return {
+        program: program,
+        aPos: aPos,
+        timeLoc: gl.getUniformLocation(program, "uTime"),
+        resLoc: gl.getUniformLocation(program, "uRes"),
+        colALoc: gl.getUniformLocation(program, "uColA"),
+        colBLoc: gl.getUniformLocation(program, "uColB"),
+        colCLoc: gl.getUniformLocation(program, "uColC"),
+        brightLoc: gl.getUniformLocation(program, "uBright")
+      };
+    }
+
+    function init(){
+      try{
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if(!gl) return false;
+
+        var quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+        for(var name in SHADERS){
+          var built = buildProgram(SHADERS[name]);
+          if(built) programs[name] = built;
+        }
+        return Object.keys(programs).length > 0;
+      }catch(e){ return false; }
+    }
+
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      if(gl) gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    function frame(ts){
+      if(!startTime) startTime = ts;
+      var t = (ts - startTime) / 1000;
+      var p = programs[activeName];
+      if(p){
+        gl.useProgram(p.program);
+        gl.enableVertexAttribArray(p.aPos);
+        gl.vertexAttribPointer(p.aPos, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform1f(p.timeLoc, t);
+        gl.uniform2f(p.resLoc, canvas.width, canvas.height);
+        gl.uniform3f(p.colALoc, palette.a[0], palette.a[1], palette.a[2]);
+        gl.uniform3f(p.colBLoc, palette.b[0], palette.b[1], palette.b[2]);
+        gl.uniform3f(p.colCLoc, palette.c[0], palette.c[1], palette.c[2]);
+        gl.uniform1f(p.brightLoc, palette.bright);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      rafBg = requestAnimationFrame(frame);
+    }
+
+    function setEffect(name){
+      if(name === "off" || !name){
+        stop();
+        return true;
+      }
+      if(!gl && !init()) return false;
+      if(!programs[name]) return false;
+      activeName = name;
+      canvas.style.display = "block";
+      resize();
+      startTime = 0;
+      if(!rafBg) rafBg = requestAnimationFrame(frame);
+      return true;
+    }
+    function setPalette(name){
+      if(BG_PALETTES[name]) palette = BG_PALETTES[name];
+    }
+    function stop(){
+      if(rafBg){ cancelAnimationFrame(rafBg); rafBg = null; }
+      canvas.style.display = "none";
+      activeName = null;
+    }
+
+    window.addEventListener("resize", resize);
+    document.addEventListener("visibilitychange", function(){
+      if(document.hidden){ if(rafBg){ cancelAnimationFrame(rafBg); rafBg = null; } }
+      else if(activeName && !rafBg){ rafBg = requestAnimationFrame(frame); }
+    });
+
+    return { setEffect: setEffect, setPalette: setPalette };
+  })();
+
+  var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var bgEffect = settings.bgEffect || (settings.bgEnabled === false || prefersReducedMotion ? "off" : "plasma");
+  var bgPalette = settings.bgPalette && BG_PALETTES[settings.bgPalette] ? settings.bgPalette : "sunset";
+
+  // foreground accent colors chosen to contrast against each background palette's hue
+  var FG_THEMES = {
+    off:    { accent: "#ff5a3c", accent2: "#3ca7ff" },
+    sunset: { accent: "#2dd4c8", accent2: "#ff6fae" },
+    candy:  { accent: "#7c3aed", accent2: "#0ea5e9" },
+    ocean:  { accent: "#ff8a3d", accent2: "#ffd23d" },
+    forest: { accent: "#ff7a59", accent2: "#ffd166" }
+  };
+  function applyForegroundTheme(){
+    var theme = FG_THEMES[bgEffect === "off" ? "off" : bgPalette] || FG_THEMES.off;
+    document.documentElement.style.setProperty("--accent", theme.accent);
+    document.documentElement.style.setProperty("--accent2", theme.accent2);
+  }
+
+  function applyBgState(){
+    bgEffectSelect.value = bgEffect;
+    bgPaletteSelect.value = bgPalette;
+    BgFX.setPalette(bgPalette);
+    if(bgEffect !== "off" && !BgFX.setEffect(bgEffect)){
+      bgEffect = "off";
+      bgEffectSelect.style.display = "none"; // WebGL unsupported: hide the selectors entirely
+      bgPaletteSelect.style.display = "none";
+    } else if(bgEffect === "off"){
+      BgFX.setEffect("off");
+    }
+    applyForegroundTheme();
+  }
+  bgEffectSelect.addEventListener("change", function(){
+    bgEffect = bgEffectSelect.value;
+    settings.bgEffect = bgEffect;
+    saveSettings(settings);
+    applyBgState();
+  });
+  bgPaletteSelect.addEventListener("change", function(){
+    bgPalette = bgPaletteSelect.value;
+    settings.bgPalette = bgPalette;
+    saveSettings(settings);
+    applyBgState();
+  });
+  applyBgState();
+
+  var BG_EFFECT_ORDER = ["off", "plasma", "waves", "aurora", "orbs", "gradient"];
+  function cycleBg(){
+    var idx = BG_EFFECT_ORDER.indexOf(bgEffect);
+    bgEffect = BG_EFFECT_ORDER[(idx + 1) % BG_EFFECT_ORDER.length];
+    settings.bgEffect = bgEffect;
+    saveSettings(settings);
+    applyBgState();
+  }
+
+  // ---------- Image resize helper (keeps localStorage small) ----------
+  function resizeImageFile(file, maxDim, cb){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var w = Math.round(img.width * scale);
+        var h = Math.round(img.height * scale);
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        cb(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ---------- Editor: workout row management ----------
+  function addWorkoutRow(workout){
+    var w = workout || defaultWorkout();
+    var node = workoutRowTpl.content.firstElementChild.cloneNode(true);
+    node.dataset.image = w.image || "";
+
+    var thumb = node.querySelector(".wrThumb");
+    var nameInput = node.querySelector(".wrName");
+    var descInput = node.querySelector(".wrDesc");
+    var minInput = node.querySelector(".wrMin");
+    var secInput = node.querySelector(".wrSec");
+    var restMinInput = node.querySelector(".wrRestMin");
+    var restSecInput = node.querySelector(".wrRestSec");
+    var subBeepSel = node.querySelector(".wrSubBeep");
+    var imageInput = node.querySelector(".wrImage");
+    var imageClearBtn = node.querySelector(".wrImageClear");
+
+    nameInput.value = w.name;
+    descInput.value = w.description || "";
+    minInput.value = Math.floor(w.durationSec/60);
+    secInput.value = w.durationSec%60;
+    restMinInput.value = Math.floor((w.restSec||0)/60);
+    restSecInput.value = (w.restSec||0)%60;
+    subBeepSel.value = w.subBeep || "none";
+    thumb.style.visibility = w.image ? "visible" : "hidden";
+    if(w.image) thumb.src = w.image;
+
+    imageInput.addEventListener("change", function(){
+      var file = imageInput.files && imageInput.files[0];
+      if(!file) return;
+      resizeImageFile(file, 200, function(dataUrl){
+        node.dataset.image = dataUrl;
+        thumb.src = dataUrl;
+        thumb.style.visibility = "visible";
+      });
+    });
+
+    imageClearBtn.addEventListener("click", function(){
+      node.dataset.image = "";
+      imageInput.value = "";
+      thumb.removeAttribute("src");
+      thumb.style.visibility = "hidden";
+    });
+
+    node.querySelector(".wrDel").addEventListener("click", function(){
+      if(workoutListEl.children.length <= 1){
+        alert("A session needs at least one workout.");
+        return;
+      }
+      node.remove();
+    });
+    node.querySelector(".wrUp").addEventListener("click", function(){
+      var prev = node.previousElementSibling;
+      if(prev) workoutListEl.insertBefore(node, prev);
+    });
+    node.querySelector(".wrDown").addEventListener("click", function(){
+      var next = node.nextElementSibling;
+      if(next) workoutListEl.insertBefore(next, node);
+    });
+
+    workoutListEl.appendChild(node);
+  }
+
+  function readWorkoutRows(){
+    var rows = Array.prototype.slice.call(workoutListEl.children);
+    return rows.map(function(node){
+      var mins = parseInt(node.querySelector(".wrMin").value,10)||0;
+      var secs = parseInt(node.querySelector(".wrSec").value,10)||0;
+      var restMins = parseInt(node.querySelector(".wrRestMin").value,10)||0;
+      var restSecs = parseInt(node.querySelector(".wrRestSec").value,10)||0;
+      return {
+        id: uid(),
+        name: node.querySelector(".wrName").value.trim() || "Workout",
+        description: node.querySelector(".wrDesc").value.trim(),
+        durationSec: Math.max(1, mins*60+secs),
+        restSec: Math.max(0, restMins*60+restSecs),
+        subBeep: node.querySelector(".wrSubBeep").value,
+        image: node.dataset.image || null
+      };
+    });
+  }
+
+  // ---------- Editor open/save ----------
+  function openEditor(forNew){
+    var s = forNew ? {name:"New Session", description:"", rounds:1, workouts:[defaultWorkout()]} : getSession(currentId);
+    fName.value = s.name;
+    fDesc.value = s.description || "";
+    fRounds.value = s.rounds;
+    workoutListEl.innerHTML = "";
+    s.workouts.forEach(function(w){ addWorkoutRow(w); });
+    overlay.classList.add("show");
+    overlay.dataset.mode = forNew ? "new" : "edit";
+    fName.focus();
+  }
+  function closeEditor(){
+    overlay.classList.remove("show");
+  }
+  function doSaveEditor(){
+    var name = fName.value.trim() || "Untitled Session";
+    var description = fDesc.value.trim();
+    var rounds = Math.max(1, parseInt(fRounds.value,10)||1);
+    var workouts = readWorkoutRows();
+    if(!workouts.length){
+      alert("Add at least one workout.");
+      return;
+    }
+
+    if(overlay.dataset.mode === "new"){
+      var ns = { id: uid(), name: name, description: description, rounds: rounds, workouts: workouts };
+      sessions.push(ns);
+      currentId = ns.id;
+    } else {
+      var s = getSession(currentId);
+      s.name = name; s.description = description; s.rounds = rounds; s.workouts = workouts;
+    }
+    saveSessions(sessions);
+    settings.currentId = currentId;
+    saveSettings(settings);
+    refreshPresetSelect();
+    closeEditor();
+    reset();
+  }
+
+  function deleteCurrentSession(){
+    if(sessions.length <= 1){
+      alert("At least one session must exist.");
+      return;
+    }
+    if(!confirm("Delete \"" + getSession(currentId).name + "\"?")) return;
+    sessions = sessions.filter(function(s){ return s.id !== currentId; });
+    saveSessions(sessions);
+    currentId = sessions[0].id;
+    settings.currentId = currentId;
+    saveSettings(settings);
+    refreshPresetSelect();
+    reset();
+  }
+
+  // ---------- Events ----------
+  presetSelect.addEventListener("change", function(){
+    currentId = presetSelect.value;
+    settings.currentId = currentId;
+    saveSettings(settings);
+    reset();
+  });
+  newBtn.addEventListener("click", function(){ openEditor(true); });
+  editBtn.addEventListener("click", function(){ openEditor(false); });
+  deleteBtn.addEventListener("click", deleteCurrentSession);
+  muteBtn.addEventListener("click", toggleMute);
+  speechBtn.addEventListener("click", toggleSpeech);
+  fsBtn.addEventListener("click", toggleFullscreen);
+  cancelEdit.addEventListener("click", closeEditor);
+  saveEdit.addEventListener("click", doSaveEditor);
+  addWorkoutBtn.addEventListener("click", function(){ addWorkoutRow(); });
+  overlay.addEventListener("click", function(e){ if(e.target === overlay) closeEditor(); });
+
+  playBtn.addEventListener("click", togglePlay);
+  resetBtn.addEventListener("click", reset);
+  skipBtn.addEventListener("click", skip);
+
+  document.addEventListener("keydown", function(e){
+    if(overlay.classList.contains("show")){
+      if(e.key === "Escape") closeEditor();
+      return;
+    }
+    switch(e.key.toLowerCase()){
+      case " ": e.preventDefault(); togglePlay(); break;
+      case "r": reset(); break;
+      case "l": skip(); break;
+      case "m": toggleMute(); break;
+      case "b": cycleBg(); break;
+      case "v": toggleSpeech(); break;
+      case "f": toggleFullscreen(); break;
+      case "e": openEditor(false); break;
+    }
+  });
+
+  // rAF-based timing recomputes dt from timestamps, so it stays accurate
+  // even after the tab is backgrounded/throttled.
+
+  // ---------- Init ----------
+  loadCurrentSession();
+})();
+</script>
+</body>
+</html>
