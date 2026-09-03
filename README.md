@@ -1,39 +1,58 @@
-## beep-timer
-A fully customizable workout timer webapp that lets you define exercise names, detailed descriptions, work durations, breaks, and audio beeps, while securely saving all your custom routines directly to local storage.
+## Beep Timer — Offline Interval Timer
+A highly customizable, responsive, and privacy-focused interval timer web application. It allows you to build custom fitness routines with tailored work windows, recovery breaks, and audio cues, keeping your workout data entirely local to your machine.
+Live App Link: artbit.github.io/beep-timer
 ------------------------------
-## 🌟 Features
+## 🌟 Key Features
 
-* Custom Routine Builder: Create, name, and arrange multiple exercise segments within a single session.
-* Descriptions & Notes: Add form tips, target muscle groups, or equipment reminders for each individual movement.
-* Precise Intervals: Set customized durations down to the second for both active work periods and recovery breaks.
-* Audio Cues: Configure beep alerts to signal the final countdown of an interval or a transition period.
-* Local Storage Integration: All created workouts are automatically saved locally in your web browser. No registration or login required—your data stays private on your device, even after closing or refreshing the page.
+* Dynamic Workout Configurator: Define individual movements, attach descriptions (form tips, equipment requirements), and configure custom work/rest durations down to the second.
+* Persistent Local Storage: Session structures and user customizations auto-save seamlessly using browser LocalStorage. Enjoy zero user registration, instant reloading, and total offline readiness.
+* Advanced Audio Signaling:
+* Main Alerts (🔊): Audio notifications to signal interval changes and upcoming blocks.
+   * Text-to-Speech (🗣): Native browser speech synthesis reads the workout name and description aloud as it initiates, eliminating the need to watch your screen.
+   * Sub-Beeps: Pacing indicators configured to sound halfway through an interval or at quarterly checkpoints.
+* Interactive Visual Themes: Switch backgrounds on the fly using native canvas/CSS shaders, featuring: Off, Plasma, Waves, Aurora, Orbs, Gradient, Sunset Pop, Cotton Candy, Ocean Deep, and Forest Moss.
+* Global Keyboard Navigation: Accelerate setup and management inside the gym using native shortcuts.
+
+------------------------------
+## ⌨️ Keyboard Shortcuts
+Speed up operations using direct hotkeys while using the application:
+
+| Key | Action |
+|---|---|
+| Space | Play / Pause tracking. |
+| R | Reset session parameters back to initial state. |
+| L | Skip the current tracking block. |
+| M | Mute or unmute peripheral sounds. |
+| V | Toggle text-to-speech voice narration engine. |
+| B | Cycle backwards and forwards through dynamic layouts. |
+| F | Toggle Fullscreen distraction-free mode. |
+| E | Open / Close session configuration interface. |
 
 ------------------------------
 ## 🛠️ Tech Stack
 
-* HTML5: Semantic markup for application structure.
-* CSS3: Responsive layouts designed for seamless desktop and mobile use.
-* JavaScript (Vanilla): LocalStorage API state management and Web Audio API for tone/beep generation.
+* HTML5 Semantic Elements: Delivers a fully native layout structure accessible for assistive readers.
+* CSS3 Custom Properties: Powers fluid layout sizing across ultra-wide desktops and mobile displays alongside rich, interactive dynamic shader profiles.
+* Vanilla JavaScript API: Native processing utilizing the Web Audio API for synthetic audio generations, Speech Synthesis engines for voice overlays, and LocalStorage for application states.
 
 ------------------------------
-## 🚀 Getting Started
-Since this is a lightweight, frontend-only web application, there is no build process or server installation required.
-## Quick Start
+## 🚀 Deployment & Installation
+Because this application relies exclusively on standard frontend technologies, there are zero server environments, dependencies, or compilers required.
+## Local Development
 
-   1. Clone the repository:
+   1. Download or clone this public directory source:
    
    git clone https://github.com
    
-   2. Navigate to the project folder:
+   2. Navigate directly into the local repository target:
    
    cd beep-timer
    
-   3. Open index.html directly in any modern web browser.
+   3. Boot the environment up by opening index.html inside your choice browser.
 
 ------------------------------
 ## 📜 License
-Distributed under the MIT License. See LICENSE for more information.
+Distributed under the open-source MIT License. Check out LICENSE for structural context.
 ------------------------------
-If you plan to expand this codebase, let me know if you would like me to draft an Installation & Contribution guide section or provide a documentation layout for the Web Audio API beep setup.
+If you'd like to scale your README further, let me know if I should detail how to write custom background presets or draft an architecture breakdown for the Web Audio API generator architecture.
 
