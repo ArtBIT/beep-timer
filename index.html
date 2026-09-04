@@ -844,10 +844,13 @@
   var phaseIndex = 0;
   var phaseElapsed = 0;
   var running = false;
+  var pendingStart = false; // waiting for pre-workout announcement to finish before timer starts
   var rafId = null;
   var lastTick = null;
   var finished = false;
   var firedSubBeeps = null; // set of fractions already fired in current phase
+  var firedCountdownBeeps = null;
+  var announcementFired = null; // whether the *next* phase was already pre-announced for the current phase
 
   function buildSchedule(s){
     schedule = [];
@@ -935,7 +938,7 @@
       sessionDescEl.style.display = "none";
     }
     renderDots();
-    playBtn.innerHTML = running
+    playBtn.innerHTML = (running || pendingStart)
       ? '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
   }
@@ -949,6 +952,8 @@
     finished = false;
     running = false;
     firedSubBeeps = {};
+    firedCountdownBeeps = {};
+    announcementFired = {};
     render();
   }
 
@@ -978,9 +983,10 @@
       osc.stop(now + dur + 0.02);
     }catch(e){}
   }
-  function beepWork(){ beep(880, 0.18, 0.3); }
+  function beepWork(){ beep(880, 0.22, 0.55); }
   function beepRest(){ beep(600, 0.15, 0.25); }
   function beepSub(){ beep(1046, 0.09, 0.18); }
+  function beepCountdown(){ beep(720, 0.08, 0.22); }
   function beepDone(){
     beep(1046, 0.16, 0.3);
     setTimeout(function(){ beep(1318, 0.28, 0.3); }, 180);
@@ -989,19 +995,45 @@
   // ---------- Voice announcements (Web Speech API, on-device, works offline) ----------
   var speechSupported = "speechSynthesis" in window;
   var speechEnabled = speechSupported && !!settings.speechEnabled;
-  function speak(text){
-    if(!speechEnabled || !text) return;
+  function speak(text, onEnd){
+    if(!speechEnabled || !text){ if(onEnd) onEnd(); return; }
     try{
       window.speechSynthesis.cancel();
       var utter = new SpeechSynthesisUtterance(text);
       utter.rate = 1;
+      if(onEnd){ utter.onend = onEnd; utter.onerror = onEnd; }
       window.speechSynthesis.speak(utter);
-    }catch(e){}
+    }catch(e){ if(onEnd) onEnd(); }
   }
-  function announcePhase(ph){
-    if(!ph) return;
-    if(ph.type === "rest"){ speak("Rest"); return; }
-    speak(ph.name + (ph.description ? ". " + ph.description : ""));
+  function announcementText(ph){
+    if(!ph) return "";
+    if(ph.type === "rest") return "Rest";
+    return "Next up, " + ph.name + (ph.description ? ". " + ph.description : "");
+  }
+  function announcePhase(ph, onEnd){
+    speak(announcementText(ph), onEnd);
+  }
+  // rough estimate of how long speaking this text will take, at rate 1 (~2.7 words/sec)
+  function estimateSpeechDuration(text){
+    if(!text) return 0;
+    var words = text.trim().split(/\s+/).length;
+    return words / 2.7 + 0.3;
+  }
+  // work phases with a countdown end with 5 beeps; the announcement must finish before those start
+  function announcementLeadTime(ph){
+    return (ph && ph.type === "work" && ph.dur >= 4) ? 4 : 0;
+  }
+  // pre-announce the upcoming phase, timed to finish just before ph's end-of-phase beeps
+  function checkAnnouncement(ph){
+    if(!speechEnabled || !ph || announcementFired[phaseIndex]) return;
+    var nextPh = schedule[phaseIndex+1];
+    if(!nextPh) return;
+    var text = announcementText(nextPh);
+    var remaining = ph.dur - phaseElapsed;
+    if(remaining <= estimateSpeechDuration(text) + announcementLeadTime(ph)){
+      announcementFired[phaseIndex] = true;
+      speak(text);
+    }
   }
 
   // sub-beep fires at these fractions of *remaining* time for a phase
@@ -1023,6 +1055,17 @@
     });
   }
 
+  function checkCountdownBeeps(ph){
+    if(!ph || ph.type !== "work" || ph.dur < 4) return;
+    var remaining = ph.dur - phaseElapsed;
+    for(var second=4; second>=1; second--){
+      if(!firedCountdownBeeps[second] && remaining <= second){
+        firedCountdownBeeps[second] = true;
+        beepCountdown();
+      }
+    }
+  }
+
   // ---------- Tick loop ----------
   function tick(ts){
     if(!running) return;
@@ -1033,10 +1076,15 @@
     phaseElapsed += dt;
     var ph = schedule[phaseIndex];
     checkSubBeeps(ph);
+    checkCountdownBeeps(ph);
+    checkAnnouncement(ph);
     if(ph && phaseElapsed >= ph.dur){
+      var announcedAlready = !!announcementFired[phaseIndex];
       phaseElapsed = 0;
       phaseIndex++;
       firedSubBeeps = {};
+      firedCountdownBeeps = {};
+      announcementFired = {};
       if(phaseIndex >= schedule.length){
         finished = true;
         running = false;
@@ -1046,29 +1094,45 @@
       } else {
         var nextPh = schedule[phaseIndex];
         if(nextPh.type === "rest") beepRest(); else beepWork();
-        announcePhase(nextPh);
+        if(!announcedAlready) announcePhase(nextPh); // fallback if it couldn't be pre-announced in time
       }
     }
     render();
     rafId = requestAnimationFrame(tick);
   }
 
-  function play(){
-    if(finished || running) return;
+  function startRunning(){
     running = true;
+    pendingStart = false;
     lastTick = null;
-    ctx(); // unlock audio on user gesture
-    if(phaseIndex === 0 && phaseElapsed === 0) announcePhase(schedule[phaseIndex]);
+    if(phaseIndex === 0 && phaseElapsed === 0){
+      var firstPh = schedule[phaseIndex];
+      if(firstPh){ if(firstPh.type === "rest") beepRest(); else beepWork(); }
+    }
     rafId = requestAnimationFrame(tick);
     render();
   }
+  function play(){
+    if(finished || running || pendingStart) return;
+    ctx(); // unlock audio on user gesture
+    if(phaseIndex === 0 && phaseElapsed === 0 && speechEnabled){
+      pendingStart = true;
+      render();
+      announcePhase(schedule[phaseIndex], function(){
+        if(pendingStart) startRunning();
+      });
+    } else {
+      startRunning();
+    }
+  }
   function pause(){
     running = false;
+    pendingStart = false;
     if(rafId) cancelAnimationFrame(rafId);
     if(speechSupported) window.speechSynthesis.cancel();
     render();
   }
-  function togglePlay(){ running ? pause() : play(); }
+  function togglePlay(){ (running || pendingStart) ? pause() : play(); }
   function reset(){
     pause();
     loadCurrentSession();
@@ -1078,6 +1142,8 @@
     phaseElapsed = 0;
     phaseIndex++;
     firedSubBeeps = {};
+    firedCountdownBeeps = {};
+    announcementFired = {};
     if(phaseIndex >= schedule.length){
       finished = true;
       pause();
