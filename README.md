@@ -1,6 +1,6 @@
 ## Beep Timer — Offline Interval Timer
 A highly customizable, responsive, and privacy-focused interval timer web application. It allows you to build custom fitness routines with tailored work windows, recovery breaks, and audio cues, keeping your workout data entirely local to your machine.
-Live App Link: artbit.github.io/beep-timer
+Live App Link: https://artbit.github.io/beep-timer
 ------------------------------
 ## 🌟 Key Features
 
