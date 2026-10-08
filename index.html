@@ -497,6 +497,7 @@
     <select id="presetSelect"></select>
     <button class="iconbtn" id="newBtn">+ New</button>
     <button class="iconbtn" id="editBtn">Edit</button>
+    <button class="iconbtn" id="shareBtn" title="Copy a link to this session">Share</button>
     <button class="iconbtn danger" id="deleteBtn">Delete</button>
     <button class="iconbtn" id="muteBtn">🔊</button>
     <button class="iconbtn" id="speechBtn" title="Read workout instructions aloud">🗣️</button>
@@ -1605,6 +1606,80 @@
     reset();
   }
 
+  // ---------- URL sharing ----------
+  function toB64Url(str){
+    var bytes = new TextEncoder().encode(str), bin = "";
+    for(var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function fromB64Url(b64){
+    var bin = atob(b64.replace(/-/g,"+").replace(/_/g,"/"));
+    var bytes = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function hashStr(str){
+    var h = 5381;
+    for(var i=0;i<str.length;i++) h = ((h*33) ^ str.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+  function encodeSession(s){
+    // images are omitted to keep the URL short
+    return toB64Url(JSON.stringify({
+      n: s.name, d: s.description, r: s.rounds,
+      w: s.workouts.map(function(x){ return [x.name, x.description, x.durationSec, x.restSec, x.subBeep]; })
+    }));
+  }
+  function decodeSession(code){
+    var o = JSON.parse(fromB64Url(code));
+    if(!o || !Array.isArray(o.w) || !o.w.length || o.w.length > 100) return null;
+    var num = function(v, max){ return Math.min(max, Math.max(0, Math.floor(Number(v)) || 0)); };
+    return {
+      id: "shared-" + hashStr(code),
+      name: String(o.n || "Shared Session").slice(0,60),
+      description: String(o.d || "").slice(0,300),
+      rounds: Math.max(1, num(o.r, 99)),
+      workouts: o.w.map(function(x){
+        return {
+          id: uid(),
+          name: String(x[0] || "Work").slice(0,40),
+          description: String(x[1] || "").slice(0,200),
+          durationSec: Math.max(1, num(x[2], 10800)),
+          restSec: num(x[3], 3600),
+          subBeep: (x[4]==="half" || x[4]==="quarter") ? x[4] : "none",
+          image: null
+        };
+      })
+    };
+  }
+  function shareCurrentSession(){
+    var url = location.origin + location.pathname + location.search + "#s=" + encodeSession(getSession(currentId));
+    var done = function(){ alert("Link copied to clipboard."); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(done, function(){ prompt("Copy this link:", url); });
+    } else {
+      prompt("Copy this link:", url);
+    }
+  }
+  function importSharedSession(){
+    var m = /^#s=([A-Za-z0-9_-]+)$/.exec(location.hash);
+    if(!m) return;
+    try{
+      var ns = decodeSession(m[1]);
+      if(ns){
+        if(!sessions.some(function(s){ return s.id === ns.id; })){
+          sessions.push(ns);
+          saveSessions(sessions);
+        }
+        currentId = ns.id;
+        settings.currentId = currentId;
+        saveSettings(settings);
+        refreshPresetSelect();
+      }
+    }catch(e){}
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
   // ---------- Events ----------
   presetSelect.addEventListener("change", function(){
     currentId = presetSelect.value;
@@ -1615,6 +1690,7 @@
   newBtn.addEventListener("click", function(){ openEditor(true); });
   editBtn.addEventListener("click", function(){ openEditor(false); });
   deleteBtn.addEventListener("click", deleteCurrentSession);
+  document.getElementById("shareBtn").addEventListener("click", shareCurrentSession);
   muteBtn.addEventListener("click", toggleMute);
   speechBtn.addEventListener("click", toggleSpeech);
   fsBtn.addEventListener("click", toggleFullscreen);
@@ -1648,6 +1724,7 @@
   // even after the tab is backgrounded/throttled.
 
   // ---------- Init ----------
+  importSharedSession();
   loadCurrentSession();
 })();
 </script>
