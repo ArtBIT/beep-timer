@@ -998,13 +998,18 @@
   var speechEnabled = speechSupported && !!settings.speechEnabled;
   function speak(text, onEnd){
     if(!speechEnabled || !text){ if(onEnd) onEnd(); return; }
+    // call onEnd exactly once; some engines (e.g. Firefox on Linux without
+    // speech-dispatcher voices) never fire onend/onerror, so add a safety timeout
+    var done = false;
+    var finish = function(){ if(done) return; done = true; if(onEnd) onEnd(); };
     try{
       window.speechSynthesis.cancel();
       var utter = new SpeechSynthesisUtterance(text);
       utter.rate = 1;
-      if(onEnd){ utter.onend = onEnd; utter.onerror = onEnd; }
+      utter.onend = finish; utter.onerror = finish;
       window.speechSynthesis.speak(utter);
-    }catch(e){ if(onEnd) onEnd(); }
+      if(onEnd) setTimeout(finish, (estimateSpeechDuration(text) + 3) * 1000);
+    }catch(e){ finish(); }
   }
   function announcementText(ph){
     if(!ph) return "";
@@ -1171,6 +1176,13 @@
   // ---------- Voice toggle ----------
   function refreshSpeechBtn(){
     speechBtn.classList.toggle("active", speechEnabled);
+    var noVoices = speechSupported && window.speechSynthesis.getVoices().length === 0;
+    speechBtn.title = noVoices
+      ? "No text-to-speech voices found in this browser (on Linux, install speech-dispatcher + espeak-ng)"
+      : "Read workout instructions aloud";
+  }
+  if(speechSupported && "onvoiceschanged" in window.speechSynthesis){
+    window.speechSynthesis.addEventListener("voiceschanged", refreshSpeechBtn);
   }
   function toggleSpeech(){
     if(!speechSupported) return;
